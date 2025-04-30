@@ -18,28 +18,44 @@ spec:
     spec:
       serviceAccountName: {{ .Release.Name }}
       initContainers:
-      - resources: {}
-        terminationMessagePath: /dev/termination-log
-        name: setup
+      - name: git-cloner
+        image: quay.io/andrew-jones/git-cloner:v0.0.2
         env:
-          - name: GIT_REPO_URL
-            value: {{ .Values.content.repoUrl }}
-          - name: GIT_REPO_REF
-            value: {{ .Values.content.repoRef }}
-          - name: BASTION_HOST
-            value: {{ .Values.wetty.ssh.sshHost }}
-          - name: BASTION_PORT
-            value: "{{ .Values.wetty.ssh.sshPort }}"
-          - name: BASTION_USER
-            value: {{ .Values.wetty.ssh.sshUser }}
-          - name: BASTION_PASSWORD
-            value: {{ .Values.wetty.ssh.sshPass }}
-        imagePullPolicy: Always
+        - name: GIT_REPO_URL
+          value: {{.Values.content.repoUrl}}
+        - name: GIT_REPO_REF
+          value: {{.Values.content.repoRef}}
         volumeMounts:
-          - name: runner
-            mountPath: /runner/
-        terminationMessagePolicy: File
-        image: 'quay.io/agonzalezrh/showroom:setup-v0.1'
+        - mountPath: /files
+          name: {{ .Release.Name }}-files
+      - name: antora-builder
+        image: docker.io/antora/antora:3.1.10
+        command: ['sh', '-c', "until [ -f .git-cloner ]; do echo waiting for files; sleep 1; done; antora --stacktrace site.yml"]
+        volumeMounts:
+        - mountPath: /antora
+          name: {{ .Release.Name }}-files
+      # - resources: {}
+      #   terminationMessagePath: /dev/termination-log
+      #   name: setup
+      #   env:
+      #     - name: GIT_REPO_URL
+      #       value: {{ .Values.content.repoUrl }}
+      #     - name: GIT_REPO_REF
+      #       value: {{ .Values.content.repoRef }}
+      #     - name: BASTION_HOST
+      #       value: {{ .Values.wetty.ssh.sshHost }}
+      #     - name: BASTION_PORT
+      #       value: "{{ .Values.wetty.ssh.sshPort }}"
+      #     - name: BASTION_USER
+      #       value: {{ .Values.wetty.ssh.sshUser }}
+      #     - name: BASTION_PASSWORD
+      #       value: {{ .Values.wetty.ssh.sshPass }}
+      #   imagePullPolicy: Always
+      #   volumeMounts:
+      #     - name: runner
+      #       mountPath: /runner/
+      #   terminationMessagePolicy: File
+      #   image: 'quay.io/agonzalezrh/showroom:setup-v0.1'
       containers:
       - resources: {}
         terminationMessagePath: /dev/termination-log
@@ -90,24 +106,17 @@ spec:
           containerPort: 8080
 
       - name: content
-        image: {{ .Values.content.image }}
+        image: quay.io/andrew-jones/caddy:v0.0.1
         imagePullPolicy: {{ .Values.content.imagePullPolicy }}
         env:
-        - name: GIT_REPO_URL
-          value: {{ .Values.content.repoUrl }}
-        - name: GIT_REPO_REF
-          value: {{ .Values.content.repoRef }}
-        - name: ANTORA_PLAYBOOK
-          value: {{ .Values.content.antoraPlaybook }}
-        - name: ZT_BUNDLE
-          value: {{ .Values.content.zero_touch_bundle }}
-        - name: ZT_UI_ENABLED
-          value: "{{ .Values.content.zero_touch_ui_enabled }}"
         volumeMounts:
-        - name: user-data
-          mountPath: /user_data/
-        - name: showroom
-          mountPath: /showroom/
+        # - name: user-data
+        #   mountPath: /user_data/
+        # - name: showroom
+        #   mountPath: /showroom/
+        - mountPath: /usr/share/caddy
+          name: {{ .Release.Name }}-files
+          subPath: "www/www"
         ports:
         - containerPort: 8000
           protocol: TCP
@@ -247,4 +256,7 @@ spec:
 {{-   else }}
         emptyDir: {}
 {{-   end }}
+      - name: {{ .Release.Name }}-files
+        persistentVolumeClaim:
+          claimName: {{ .Release.Name }}-files
 {{- end }}

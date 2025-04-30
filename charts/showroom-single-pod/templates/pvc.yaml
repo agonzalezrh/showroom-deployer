@@ -15,3 +15,15 @@ spec:
     requests:
       storage: {{ .Values.terminal.storage.pvcSize }}
 {{- end }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ .Release.Name }}-files
+  namespace: {{ .Release.Namespace}}
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
