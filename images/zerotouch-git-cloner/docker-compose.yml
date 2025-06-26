@@ -1,0 +1,10 @@
+---
+version: '3.8'
+services:
+  git-cloner:
+    build: .
+    environment:
+      - GIT_REPO_URL=https://github.com/rhpds/lab_zero_touch_template.git
+      # - GIT_REPO_REF=main # Optional: specify a branch, tag, or commit
+    volumes:
+      - ./.files:/files:Z

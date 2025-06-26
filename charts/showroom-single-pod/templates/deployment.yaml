@@ -17,8 +17,24 @@ spec:
         app.kubernetes.io/name: {{ .Release.Name }}
     spec:
       serviceAccountName: {{ .Release.Name }}
-{{- if eq .Values.automation.setup "true" }}
       initContainers:
+      - name: git-cloner
+        image: quay.io/rhpds/git-cloner:v0.0.8
+        env:
+        - name: GIT_REPO_URL
+          value: {{.Values.content.repoUrl}}
+        - name: GIT_REPO_REF
+          value: {{.Values.content.repoRef}}
+        volumeMounts:
+        - mountPath: /files
+          name: {{ .Release.Name }}-files
+      - name: antora-builder
+        image: docker.io/antora/antora:3.1.10
+        command: ['sh', '-c', "until [ -f .git-cloner ]; do echo waiting for files; sleep 1; done; echo Generating Antora content...; antora --stacktrace site.yml; echo done; tree;"]
+        volumeMounts:
+        - mountPath: /antora
+          name: {{ .Release.Name }}-files
+{{- if eq .Values.automation.setup "true" }}
       - resources: {}
         terminationMessagePath: /dev/termination-log
         name: setup
@@ -88,28 +104,24 @@ spec:
         terminationMessagePath: /dev/termination-log
         name: runner
         env:
-          - name: GIT_REPO_URL
-            value: {{ .Values.content.repoUrl }}
-          - name: GIT_REPO_REF
-            value: {{ .Values.content.repoRef }}
-          - name: BASTION_HOST
-            value: {{ .Values.wetty.ssh.sshHost }}
-          - name: BASTION_PORT
-            value: "{{ .Values.wetty.ssh.sshPort }}"
-          - name: BASTION_USER
+          - name: ANSIBLE_USER
             value: {{ .Values.wetty.ssh.sshUser }}
           - name: BASTION_PASSWORD
             value: {{ .Values.wetty.ssh.sshPass }}
         ports:
           - name: runner
-            containerPort: 8501
+            containerPort: 80
             protocol: TCP
         imagePullPolicy: Always
         volumeMounts:
-          - name: runner
-            mountPath: /runner/
+        - mountPath: /app/runtime-automation
+          name: {{ .Release.Name }}-files
+          subPath: runtime-automation
+        # Mount the log directory
+        - mountPath: /app/logs
+          name: {{ .Release.Name }}-logs
         terminationMessagePolicy: File
-        image: 'quay.io/agonzalezrh/showroom:runner-v1.13'
+        image: 'quay.io/rhpds/zerotouch-automation:v0.0.2'
       - name: nginx
         image: {{ .Values.proxy.image }}
         imagePullPolicy: {{ .Values.proxy.imagePullPolicy }}
@@ -405,6 +417,17 @@ spec:
           protocol: TCP
 
       volumes:
+      - name: {{ .Release.Name }}-files
+        emptyDir: {}
+        # TODO enable PVC in prod?  Or always use PVC and set git-cloner to have a pull or wipe+re-clone option?
+        # Using emptyDir for testing so deleting the pod cleans up the repo
+        # persistentVolumeClaim:
+        #   claimName: {{ .Release.Name }}-files
+      - name: {{ .Release.Name }}-logs
+        emptyDir: {}
+        # TODO enable PVC in prod?
+        # persistentVolumeClaim:
+        #   claimName: {{ .Release.Name }}-logs
       - name: runner
         emptyDir: {}
       - name: showroom
