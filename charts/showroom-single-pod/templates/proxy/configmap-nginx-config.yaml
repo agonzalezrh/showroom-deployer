@@ -145,7 +145,7 @@ data:
 
         location ^~ /runner {
           rewrite ^/runner(/.*)$ $1 break;
-          proxy_pass http://localhost:8501/;
+          proxy_pass http://localhost:9146/;
           proxy_http_version 1.1;
           proxy_set_header Upgrade $http_upgrade;
           proxy_set_header Connection "upgrade";

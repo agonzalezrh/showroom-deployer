@@ -30,7 +30,6 @@ content:
     limits:
       memory: 64Mi
     requests:
-      cpu: 100m
       memory: 64Mi
   user_data: |
     bastion_password: from_helm
@@ -58,10 +57,8 @@ terminal:
   port: 7681
   resources:
     limits:
-      cpu: 500m
       memory: 1Gi
     requests:
-      cpu: 500m
       memory: 512Mi
   # Set up persistent storage for the lab-user's home directory
   storage:
@@ -81,7 +78,6 @@ wetty:
     limits:
       memory: 256Mi
     requests:
-      cpu: 500m
       memory: 256Mi
   ssh:
     autoSshToBastion: "false"
@@ -101,7 +97,6 @@ codeserver:
     limits:
       memory: 512Mi
     requests:
-      cpu: 500m
       memory: 512Mi
 
 # To be fully implemented
@@ -118,7 +113,6 @@ novnc:
     limits:
       memory: 256Mi
     requests:
-      cpu: 500m
       memory: 256Mi
 
 cloud:
@@ -143,7 +137,6 @@ cloud:
     limits:
       memory: 256Mi
     requests:
-      cpu: 500m
       memory: 256Mi
 
 ironrdp:
